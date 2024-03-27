@@ -1,0 +1,29 @@
+{#
+/**
+ * @file
+ * Template for displaying the book enquiry list.
+ */
+#}
+
+<table class="book-enquiry-table">
+  <thead>
+  <tr>
+    <th>Serial No.</th>
+    <th>Course Id</th>
+    <th>Course Name</th> {# Add the course name header #}
+    <th>Enrolled Date</th>
+  </tr>
+  </thead>
+  <tbody>
+  {% set counter = 1 %}
+  {% for result in results %}
+    <tr>
+      <td>{{ counter }}</td>
+      <td>{{ result.course_id }}</td>
+      <td><a href="{{ path('entity.node.canonical', {'node': result.course_id}) }}">{{ result.course_name }}</a></td> {# Create hyperlink for course name #}
+      <td>{{ result.enrollment_date }}</td>
+    </tr>
+    {% set counter = counter + 1 %}
+  {% endfor %}
+  </tbody>
+</table>
