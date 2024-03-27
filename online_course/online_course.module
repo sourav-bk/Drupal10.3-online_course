@@ -1,0 +1,225 @@
+<?php
+use Drupal\Core\Url;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Session\SessionInterface;
+
+/**
+ * Implements hook_views_pre_render().
+ */
+function online_course_views_pre_render(\Drupal\views\ViewExecutable $view) {
+  // Check if the View being rendered is the course listing View.
+  if ($view->id() == 'course_view') {
+    // Initialize an empty array to store renderable elements.
+    $course_items = [];
+    $current_user = \Drupal::currentUser();
+    $session = \Drupal::request()->getSession();
+
+    // Get role ID.
+    $student_role_id = 'students';
+    $admin_role_id = 'administrator';
+
+    // Loop through each result row.
+    foreach ($view->result as $index => $row) {
+      // Assuming 'title' is the field containing the course title.
+      $title = $row->_entity->getTitle();
+      $label_items = $row->_entity->get('field_course_label')->getValue();
+      $label = !empty($label_items) ? $label_items[0]['value'] : '';
+      $course_id = $row->_entity->id();
+
+      // Check if the user is already enrolled in this course.
+      $already_enrolled = is_user_enrolled($current_user->id(), $course_id);
+
+      // Extract category names.
+      $category_items = $row->_entity->get('field_course_category')->referencedEntities();
+      $category_value = [];
+      foreach ($category_items as $term) {
+        $category_value[] = $term->getName();
+      }
+
+      // Get image URL.
+      $image_url = '';
+      $image_field = $row->_entity->get('field_course_image');
+      if (!$image_field->isEmpty()) {
+        $file_entity = $image_field->entity;
+        $image_url = \Drupal::service('file_url_generator')->generateAbsoluteString($file_entity->getFileUri());
+      }
+
+      // Set the URL for enrollment.
+      if ($current_user->hasRole($student_role_id) || $current_user->hasRole($admin_role_id)) {
+        $enroll_url =Url::fromUri('internal:/enroll-click-counter/' . $row->_entity->id());
+      } else {
+        $enroll_url = Url::fromRoute('user.login');
+      }
+
+      $course_items[$index]['image'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'div',
+        '#attributes' => ['class' => ['image']],
+        '#value' => '<img src="' . $image_url . '" alt="' . $title . '">',
+      ];
+
+      $course_items[$index]['title'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'div',
+        '#attributes' => ['class' => ['title']],
+        '#value' => '<strong>' . $title . '</strong>',
+      ];
+
+      $course_items[$index]['category'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'div',
+        '#attributes' => ['class' => ['category']],
+        '#value' => implode(', ', $category_value),
+      ];
+
+      $course_items[$index]['label'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'div',
+        '#attributes' => ['class' => ['label']],
+        '#value' => '<strong>' . $label . '</strong>',
+      ];
+
+      // Retrieve Fivestar rating from the field.
+      $rating_items = $row->_entity->get('field_rating')->getValue();
+      $rating_count = count($rating_items);
+      $total_rating = 0;
+
+      // Check if field_rating key is set in the rating item
+      if (isset($rating['field_rating'])) {
+        // Loop through each rating item
+        foreach ($rating_items as $rating) {
+          // Add the rating to the total_rating
+          $total_rating += $rating['value'];
+        }
+      }
+      $average_rating = $rating_count > 0 ? $total_rating / $rating_count : 0;
+
+      // Add star rating.
+      /*$course_items[$index]['star_rating'] = [
+        '#theme' => 'fivestar_formatter',
+        '#item' => ['rating' => $average_rating],
+        '#settings' => [
+          'stars' => 5,
+          'widget' => 'basic',
+          'user' => FALSE,
+        ],
+        '#prefix' => '<div class="star-rating">',
+        '#suffix' => '</div>',
+      ];*/
+
+      // Add count of ratings.
+      $course_items[$index]['rating_count'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'div',
+        '#attributes' => ['class' => ['rating-count']],
+        '#value' => $rating_count . ' ratings',
+      ];
+
+      // Add count of enrollments.
+      $enrollment_count = $row->_entity->get('field_total_count')->value;
+      $enrollment_text = $enrollment_count > 0 ? $enrollment_count . ' students enrolled' : '0 students enrolled';
+
+      $course_items[$index]['enrollment_count'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'div',
+        '#attributes' => ['class' => ['enrollment-count']],
+        '#value' => $enrollment_text,
+      ];
+
+      // Build HTML for the enroll button.
+      $course_items[$index]['enroll_button'] = [
+        '#type' => 'link',
+        '#title' => $already_enrolled ? 'Enrolled' : 'Enroll now',
+        '#url' => $enroll_url,
+        '#attributes' => ['class' => ['button-link']],
+      ];
+
+      // Add class for styling the course item.
+      $course_items[$index]['#attributes']['class'][] = 'course-item';
+    }
+
+    // Set the renderable elements in the View's build array.
+    $view->attachment_after = [
+      '#theme' => 'item_list',
+      '#items' => $course_items,
+      '#attributes' => ['class' => ['course-items-wrapper']], // Wrapper div for the entire grid
+    ];
+  }
+}
+
+/**
+ * Check if the user is enrolled in a course.
+ *
+ * @param int $user_id
+ *   The ID of the user.
+ * @param int $course_id
+ *   The ID of the course.
+ *
+ * @return bool
+ *   TRUE if the user is enrolled in the course, FALSE otherwise.
+ */
+function is_user_enrolled($user_id, $course_id) {
+  // Query the database to check if the user is enrolled in the course.
+  $query = \Drupal::database()->select('user_course_enrollments', 'uce')
+    ->fields('uce', ['id'])
+    ->condition('user_id', $user_id)
+    ->condition('course_id', $course_id)
+    ->execute()
+    ->fetchField();
+
+  return !empty($query);
+}
+
+
+function online_course_theme() {
+  return [
+    "online_course_list" => [
+      "template" => "online-course-list",
+      "variables" => [
+        "results" => [],
+      ],
+    ],
+
+
+  ];
+}
+
+
+/*function online_course_views_pre_render(\Drupal\views\ViewExecutable $view) {
+  // Check if the View being rendered is the course listing View.
+  if ($view->id() == 'course_view') {
+    // Initialize an empty variable to store course items HTML.
+    $course_items_html = '';
+
+    // Loop through each result row.
+    foreach ($view->result as $index => $row) {
+      // Extracting required fields from the row object.
+      $title = $row->_entity->getTitle();
+      $category = $row->_entity->get('field_course_category')->value;
+      $image_field = $row->_entity->get('field_course_image');
+      $image_url = '';
+
+      // Check if the image field has a value.
+      if (!$image_field->isEmpty()) {
+        $file_entity = $image_field->entity;
+        $image_url =  \Drupal::service('file_url_generator')->generateAbsoluteString($file_entity->getFileUri());
+      }
+
+      // Build HTML for the course item.
+      $course_items_html .= '<div class="course-item">';
+      $course_items_html .= '<div class="title">' . $title . '</div>';
+      $course_items_html .= '<div class="category">' . $category . '</div>';
+      $course_items_html .= '<div class="image"><img src="' . $image_url . '" alt="' . $title . '"></div>';
+      // Output the "Enroll now" button with a link to the course page.
+      $course_items_html .= '<a href="' . Url::fromRoute('entity.node.canonical', ['node' => $row->nid])->toString() . '" class="button">Enroll now</a>';
+      $course_items_html .= '</div>';
+    }
+
+    // Output the course items HTML with a wrapper div.
+    echo '<div class="course-items-wrapper">';
+    echo $course_items_html;
+    echo '</div>';
+
+  }
+}*/
+

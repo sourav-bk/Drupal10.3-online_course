@@ -1,0 +1,39 @@
+<?php
+
+function online_course_schema() {
+  $schema['user_course_enrollments'] = array(
+    'description' => 'The table for storing the course ans user data.',
+    'fields' => array(
+      'id' => array(
+        'description' => 'The primary identifier for user',
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'user_id' => array(
+        'type' => 'int',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'User id of a person.',
+      ),
+      'course_id' => array(
+        'type' => 'int',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Store course_id of a person',
+      ),
+      'enrollment_date' => array(
+        'type' => 'datetime', // Changed from 'timestamp'
+        'not null' => TRUE,
+        'mysql_type' => 'timestamp', // Specify MySQL type for MariaDB
+        'mysql_default' => 'CURRENT_TIMESTAMP', // Specify MySQL default value
+        'description' => 'The enrollment date of course',
+      ),
+
+    ),
+    'primary key' => array('id'),
+  );
+  return $schema;
+}
