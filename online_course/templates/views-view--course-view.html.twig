@@ -1,0 +1,15 @@
+{# Your Twig template file #}
+
+{# Loop through each row in the grid view #}
+{% for row in rows %}
+  {# Output the grid item wrapper #}
+
+    {# Loop through each field in the row #}
+    {% for field in row.fields %}
+      {# Output the field content #}
+      {{ field.content }}
+    {% endfor %}
+    {# Add the "Enroll now" button below each course item #}
+    <a href="{{ path('entity.node.canonical', {'node': row.content['#row'].nid}) }}" class="button">Enroll now</a>
+
+{% endfor %}
