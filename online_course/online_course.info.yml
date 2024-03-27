@@ -1,0 +1,7 @@
+name: Online Course Module
+type: module
+description: 'Online Course drupal 10 module'
+package: custom
+core_version_requirement: ^9 || ^10
+
+
