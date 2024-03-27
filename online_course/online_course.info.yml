@@ -3,5 +3,5 @@ type: module
 description: 'Online Course drupal 10 module'
 package: custom
 core_version_requirement: ^9 || ^10
-
-
+libraries:
+  - online_course/enroll_button_click.js
