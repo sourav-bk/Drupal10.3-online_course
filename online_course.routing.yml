@@ -1,0 +1,15 @@
+online_course.enroll_click_counter:
+  path: '/enroll-click-counter/{node}'
+  defaults:
+    _controller: '\Drupal\online_course\Controller\EnrollClickController::incrementCount'
+  requirements:
+    _permission: 'access content'
+    node: \d+
+
+online_course.list:
+  path: '/my-course'
+  defaults:
+    _controller: '\Drupal\online_course\Controller\MyCourse::courseEnquiryList'
+    _title: 'My Course View'
+  requirements:
+    _permission: 'access content'
