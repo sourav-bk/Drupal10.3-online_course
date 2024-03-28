@@ -10,7 +10,7 @@ use Drupal\Core\Access\AccessResult;
  */
 function online_course_views_pre_render(\Drupal\views\ViewExecutable $view) {
   // Check if the View being rendered is the course listing View.
-  if ($view->id() == 'course_view' || $view->id() == 'development_view' || $view->id() == 'business_view' || $view->id() == 'finance_accounting_view' || $view->id() == 'health_fitness_view' || $view->id() == 'marketing_view') {
+  if ($view->id() == 'course_view' || $view->id() == 'development_view' || $view->id() == 'business_view' || $view->id() == 'finance_view' || $view->id() == 'health_fitness_view' || $view->id() == 'marketing_view') {
     // Initialize an empty array to store renderable elements.
     $course_items = [];
     $current_user = \Drupal::currentUser();
