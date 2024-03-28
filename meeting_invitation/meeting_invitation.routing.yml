@@ -1,0 +1,7 @@
+meeting_invitation.enroll_click_counter:
+  path: '/online-course-training/{node}'
+  defaults:
+    _controller: '\Drupal\meeting_invitation\Controller\OnlineClass::onlineCourse'
+  requirements:
+    _permission: 'access content'
+    node: \d+
