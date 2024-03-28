@@ -1,0 +1,115 @@
+<?php
+use Drupal\Core\Url;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Session\SessionInterface;
+
+/**
+ * Implements hook_views_pre_render().
+ */
+function meeting_invitation_views_pre_render(\Drupal\views\ViewExecutable $view) {
+  // Check if the View being rendered is the course listing View.
+  if ($view->id() == 'online_class') {
+    // Initialize an empty array to store renderable elements.
+    $course_items = [];
+    $current_user = \Drupal::currentUser();
+    $session = \Drupal::request()->getSession();
+
+    // Get role ID.
+    $student_role_id = 'students';
+    $admin_role_id = 'administrator';
+    $trainingManager_role_id = 'training_managers';
+    $trainer_role_id = 'trainer';
+
+    // Loop through each result row.
+    foreach ($view->result as $index => $row) {
+      // Assuming 'title' is the field containing the course title.
+      $title = $row->_entity->getTitle();
+      $course_topic = $row->_entity->get('field_course_topics')->referencedEntities();
+      $meeting_date = $row->_entity->get('field_meeting_date')->value;
+      $meeting_url = $row->_entity->get('field_meeting_url')->uri;
+
+// Now $course_topic contains an array of referenced entities.
+      foreach ($course_topic as $topic) {
+
+        $topic_title = $topic->getTitle();
+      }
+      $course_id = $row->_entity->id();
+
+      // Check if the user is already enrolled in this course.
+      $already_enrolled = is_user_joined($current_user->id(), $course_id);
+
+
+
+      // Set the URL for enrollment.
+      if ($current_user->hasRole($student_role_id) || $current_user->hasRole($admin_role_id) || $current_user->hasRole($trainingManager_role_id) || $current_user->hasRole($trainer_role_id)) {
+        $enroll_url =Url::fromUri('internal:/online-course-training/' . $row->_entity->id());
+      } else {
+        $enroll_url = Url::fromRoute('user.login');
+      }
+
+      $course_items[$index]['title'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'div',
+        '#attributes' => ['class' => ['training-title']],
+        '#value' => '<strong>' . $title . '</strong>',
+      ];
+      $course_items[$index]['topic'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'div',
+        '#attributes' => ['class' => ['topic']],
+        '#value' => 'Course: <strong>' . $topic_title . '</strong>',
+      ];
+      $course_items[$index]['meeting'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'div',
+        '#attributes' => ['class' => ['meeting']],
+        '#value' => 'Time: <strong>' . $meeting_date . '</strong>',
+      ];
+
+
+      // Build HTML for the enroll button.
+      $course_items[$index]['enroll_button'] = [
+        '#type' => 'link',
+        '#title' => $already_enrolled ? 'Attended' : 'Join',
+        // Set the URL of the button based on the meeting URL.
+        '#url' => $enroll_url,
+        '#attributes' => ['class' => ['button-link join-link']],
+      ];
+
+      // Add class for styling the course item.
+      $course_items[$index]['#attributes']['class'][] = 'course-item';
+    }
+
+    // Set the renderable elements in the View's build array.
+    $view->attachment_after = [
+      '#theme' => 'item_list',
+      '#items' => $course_items,
+      '#attributes' => ['class' => ['training-items-wrapper']], // Wrapper div for the entire grid
+    ];
+  }
+}
+
+/**
+ * Check if the user is enrolled in a course.
+ *
+ * @param int $user_id
+ *   The ID of the user.
+ * @param int $course_id
+ *   The ID of the course.
+ *
+ * @return bool
+ *   TRUE if the user is enrolled in the course, FALSE otherwise.
+ */
+function is_user_joined($user_id, $course_id) {
+  // Query the database to check if the user is enrolled in the course.
+  $query = \Drupal::database()->select('meeting_invitation', 'uce')
+    ->fields('uce', ['id'])
+    ->condition('user_id', $user_id)
+    ->condition('course_id', $course_id)
+    ->execute()
+    ->fetchField();
+
+  return !empty($query);
+}
+
+

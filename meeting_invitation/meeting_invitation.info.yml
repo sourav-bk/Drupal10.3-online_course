@@ -1,0 +1,7 @@
+name: 'Meeting Invitation'
+type: module
+description: 'Allows admins to create meeting URLs and invite users to attend.'
+core_version_requirement: ^9 || ^10
+package: Custom
+dependencies:
+  - drupal:user
